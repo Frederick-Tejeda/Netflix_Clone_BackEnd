@@ -5,18 +5,34 @@ const { sign } = require('../jwt');
 
 const controller = {}
 
-controller.createToken = async (req, res) => {
-    try{
-        const token = await sign(req);
-        res.status(200).json({ token });
-    }catch(err){
-        return res.status(500).json({"message": 'Something went wrong while signing token...'})
-    }
-}
+// const createToken = async (req, res) => {
+//     try{
+//         const token = await sign(req);
+//         res.status(200).json({ token });
+//     }catch(err){
+//         return res.status(500).json({"message": 'Something went wrong while signing token...'})
+//     }
+// }
+
+// controller.createToken = createToken;
 
 controller.getUsers = async (req, res) => {
     const users = await User.find()
-    res.status(200).json((users.length == 0) ? [] : users)
+    res.status(200).json(users)
+}
+
+controller.authUser = async (req, res) => {
+    const { username, password } = req.body;
+    if(!username || !password) return res.status(500).json({"message": 'Something went wrong...'});
+    const user = await User.findOne({ username: username });
+    if(!user) return res.status(200).json({"message": 'User no exist...', "success": false});
+    const decryptedPassword = Decrypt(user.password);
+    if(decryptedPassword[0] == "ERR") return res.status(500).json({"message": decryptedPassword[1], "success": false});
+    if(decryptedPassword[1] !== password) return res.status(200).json({"message": 'Wrong password...', success: false});
+    sign({ id: user._id }).then( ([status, token]) => {
+        if(!status) return res.status(500).json({"message": token, "success": false});
+        return res.status(200).json({"idUser": user._id, "idProfile": user.profiles[0]._id, "name": user.name, "token": token, "success": true});
+    });
 }
 
 controller.createUser = async (req, res) => {
@@ -77,23 +93,24 @@ controller.getProfile = async (req, res) => {
 controller.updateProfile = async (req, res) => {
     const user = await User.findById(req.params.idUser)
     if(user == null){
-        res.status(500).json({"message": 'User no exist...'});
+        return res.status(500).json({"message": 'User no exist...', "success": false});
     }else{
         const { username, password } = user;
         const profile = user.profiles.find(profile => profile._id.toString() === req.params.idProfile);
-        if(!profile) return res.status(500).json({"message": 'Profile no exist...'});
+        if(!profile) return res.status(500).json({"message": 'Profile no exist...', "success": false});
 
         const { avatar, name, code, isKid, watchingTvShows, watchingMovies, wishList, favorites } = profile;
         const [newWatchingMovies = watchingMovies, newWatchingTvShows = watchingTvShows, newWishList = wishList, newFavorites = favorites] = [ [...watchingMovies], [...watchingTvShows], [...wishList], [...favorites] ];
         const { change, id } = req.query;
-
+        
         if(!change || !id) return res.status(500).json({"message": 'Something went wrong...'});
 
-        if(change == "Movies"){
+        if(change == "movie"){
             const allreadyWatchingIt = (newWatchingMovies.findIndex( movie => movie.id === id ) == -1) ? false : true;
             if(!allreadyWatchingIt) newWatchingMovies.push( { id } );
-        }else if(change == "TvShows"){
-            const { season, episode } = req.query;
+        }else if(change == "tv"){
+            const season = req.query.season || 1;
+            const episode = req.query.episode || 1;
         
             if(!season || !episode) return res.status(500).json({"message": 'Something went wrong...'});
 
