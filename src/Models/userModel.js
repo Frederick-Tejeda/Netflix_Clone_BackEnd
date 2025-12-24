@@ -10,10 +10,6 @@ const userSchema = new Schema({
         type: String,
         required: true,
     },
-    name: {
-        type: String,
-        required: true,
-    },
     profiles: {
         type: [
             {
@@ -28,11 +24,6 @@ const userSchema = new Schema({
                     type: Number,
                     minlength: 4,
                     maxlength: 4,
-                },
-                isKid: {
-                    type: Boolean,
-                    required: true,
-                    default: false,
                 },
                 watchingTvShows: {
                     type: [
@@ -86,11 +77,11 @@ const userSchema = new Schema({
                 }
             }
         ], default: [
-            { name: 'Profile 1', isKid: false, avatar: '<default avatar icon route>' },
-            { name: 'Profile 2', isKid: false, avatar: '<default avatar icon route>' },
-            { name: 'Profile 3', isKid: false, avatar: '<default avatar icon route>' },
-            { name: 'Profile 4', isKid: false, avatar: '<default avatar icon route>' },
-            { name: 'Profile 5', isKid: false, avatar: '<default avatar icon route>' },
+            { name: 'Profile 1', avatar: '<default avatar icon route>' },
+            { name: 'Profile 2', avatar: '<default avatar icon route>' },
+            { name: 'Profile 3', avatar: '<default avatar icon route>' },
+            { name: 'Profile 4', avatar: '<default avatar icon route>' },
+            { name: 'Profile 5', avatar: '<default avatar icon route>' },
         ],
     }
 }, {

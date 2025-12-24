@@ -5,17 +5,6 @@ const { sign } = require('../jwt');
 
 const controller = {}
 
-// const createToken = async (req, res) => {
-//     try{
-//         const token = await sign(req);
-//         res.status(200).json({ token });
-//     }catch(err){
-//         return res.status(500).json({"message": 'Something went wrong while signing token...'})
-//     }
-// }
-
-// controller.createToken = createToken;
-
 controller.getUsers = async (req, res) => {
     const users = await User.find()
     res.status(200).json(users)
@@ -23,8 +12,8 @@ controller.getUsers = async (req, res) => {
 
 controller.authUser = async (req, res) => {
     const { username, password } = req.body;
-    if(!username || !password) return res.status(500).json({"message": 'Something went wrong...'});
-    const user = await User.findOne({ username: username });
+    if(!username || !password) return res.status(500).json({"message": 'Something went wrong...', "success": false});
+    const user = await User.findOne({ username });
     if(!user) return res.status(200).json({"message": 'User no exist...', "success": false});
     const decryptedPassword = Decrypt(user.password);
     if(decryptedPassword[0] == "ERR") return res.status(500).json({"message": decryptedPassword[1], "success": false});
@@ -36,46 +25,48 @@ controller.authUser = async (req, res) => {
 }
 
 controller.createUser = async (req, res) => {
-    const { username, password, name } = req.body
+    const { username, password } = req.body
+    const userFound = User.findOne({ username })
+    if(userFound) return res.status(200).json({ "message": "User all ready exist", "success": false})
     const encryptedPassword = Encrypt(password);
-    if(encryptedPassword[0] == "ERR") return res.status(500).json({"message": encryptedPassword[1]});
-    const newUser = new User({ username, password: encryptedPassword[1], name })
+    if(encryptedPassword[0] == "ERR") return res.status(500).json({ "message": encryptedPassword[1], "success": false});
+    const newUser = new User({ username, password: encryptedPassword[1] })
     await newUser.save()
-    res.status(201).json({ "message": 'User created' })
+    res.status(201).json({ "message": 'User created', "success": true })
 }
 
 controller.getUser = async (req, res) => {
     const user = await User.findById(req.params.idUser)
-    if(!user) return res.status(200).json({"message": 'User no exist...'});
+    if(!user) return res.status(200).json({"message": 'User no exist...', "success": false});
     const decryptedPassword = Decrypt(user.password);
-    if(decryptedPassword[0] == "ERR") return res.status(500).json({"message": decryptedPassword[1]});
+    if(decryptedPassword[0] == "ERR") return res.status(500).json({"message": decryptedPassword[1], "success": false});
     user.password = decryptedPassword[1];
-    res.status(200).json(user)
+    res.status(200).json({user, "success": true})
 }
 
 controller.updateUser = async (req, res) => {
     const actualUser = await User.findById(req.params.idUser)
     if(actualUser == null){
-        res.status(500).json({"message": 'Something went wrong while updating...'})
+        res.status(500).json({"message": 'Something went wrong while updating...', "success": false})
     }
     else{
         const newUserData = req.body;
         const encryptedUserData = Encrypt(newUserData.password);
-        if(encryptedUserData[0] == "ERR") return res.status(500).json({"message": encryptedUserData[1]});
+        if(encryptedUserData[0] == "ERR") return res.status(500).json({"message": encryptedUserData[1], "success": false});
         newUserData.password = encryptedUserData[1];
         await User.findByIdAndUpdate(req.params.idUser, newUserData)
-        res.status(200).json({ "message": 'User updated' })
+        res.status(200).json({ "message": 'User updated', "success": true })
     }
 }
 
 controller.deleteUser = async (req, res) => {
     const actualUsers = await User.find()
-    await User.findByIdAndDelete(req.params.id)
+    await User.findByIdAndDelete(req.params.idUser)
     const newActualUsers = await User.find()
     if(actualUsers.length == newActualUsers.length){
-        res.status(500).json({"message": 'Something went wrong while deleting...'})
+        res.status(500).json({"message": 'Something went wrong while deleting...', "success": false})
     }else{
-        res.status(200).json({"message": 'User deleted'})
+        res.status(200).json({"message": 'User deleted', "success": true})
     }
 }
 
@@ -103,7 +94,7 @@ controller.updateProfile = async (req, res) => {
         const [newWatchingMovies = watchingMovies, newWatchingTvShows = watchingTvShows, newWishList = wishList, newFavorites = favorites] = [ [...watchingMovies], [...watchingTvShows], [...wishList], [...favorites] ];
         const { change, id } = req.query;
         
-        if(!change || !id) return res.status(500).json({"message": 'Something went wrong...'});
+        if(!change || !id) return res.status(500).json({"message": 'Something went wrong...', "success": false});
 
         if(change == "movie"){
             const allreadyWatchingIt = (newWatchingMovies.findIndex( movie => movie.id === id ) == -1) ? false : true;
@@ -112,7 +103,7 @@ controller.updateProfile = async (req, res) => {
             const season = req.query.season || 1;
             const episode = req.query.episode || 1;
         
-            if(!season || !episode) return res.status(500).json({"message": 'Something went wrong...'});
+            if(!season || !episode) return res.status(500).json({"message": 'Something went wrong...', "success": false});
 
             const watchingItIndex = newWatchingTvShows.findIndex( tvShow => tvShow.id === id );
             if(watchingItIndex != -1){
@@ -128,7 +119,7 @@ controller.updateProfile = async (req, res) => {
             const allreadyFavorite = (newFavorites.find( favorite => favorite.id === id ) == -1)? true : false;
             if(!allreadyFavorite) newFavorites.push( { id } );
         }else{
-            return res.status(500).json({"message": 'Something went wrong...'});
+            return res.status(500).json({"message": 'Something went wrong...', "success": false});
         }
 
         const updatePayload = {
