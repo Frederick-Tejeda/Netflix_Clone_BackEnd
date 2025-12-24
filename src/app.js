@@ -10,11 +10,10 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
-app.get('/', (req, res) => res.send("Server is up!"));
+app.get('/', (req, res) => res.status(200).json({"message": "Server is up!", "success": true}));
 app.use('/users', require('./Routes/user'));
 
 app.use((req, res) => {
-    // If execution reaches here, no other route matched
     res.status(404).send({ 
         message: 'Not Found', 
         path: req.originalUrl 
